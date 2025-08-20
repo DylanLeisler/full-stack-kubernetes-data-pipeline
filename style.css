@@ -1,0 +1,19 @@
+#data-container table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+#data-container caption {
+    font-size:x-large;
+    padding-bottom: 2em;
+    font-weight: bold; 
+    text-decoration: underline;
+}
+
+#data-container th {
+  background-color: #eee;
+  font-weight: bold;
+}
+
+#data-container {
+  overflow-x: auto;
+}
