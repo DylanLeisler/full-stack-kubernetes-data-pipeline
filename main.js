@@ -1,6 +1,6 @@
 // @ts-check
 
-import { pipeWith, andThen, tap } from 'https://cdn.skypack.dev/ramda@0.31.3';
+import { pipeWith, andThen, tap } from 'ramda';
 
 const LINES_ROW_TITLE_LIST = 6;
 const LINES_DATA_INDEX_START = 7;
@@ -127,6 +127,9 @@ const display = (unpivot = false) =>
     )();
 
 display(true).then(() => console.log('CSV Displayed!'));
+
+
+export { loadCSV, parseCSV };
 
 
 
