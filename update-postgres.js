@@ -9,23 +9,16 @@ import { Readable } from 'stream'
 
 const { Client } = pkg;
 const copyString = copyFrom.from
-const VANILLA_CSV_URL = 'file://' + CSV_URL;
 
-console.log(VANILLA_CSV_URL)
 
-let client
-try {
-  client = new Client({
-    host: 'localhost',
-    port: 5432,
-    user: 'postgres',
-    password: 'password',
-    database: 'testdb'
-  });
-} catch (error) {
-  console.log("Error creating database client");
-  console.error(error);
-}
+
+const client = new Client({
+  host: 'localhost',
+  port: 5432,
+  user: 'postgres',
+  password: 'password',
+  database: 'testdb'
+});
 
 const pipe_update_query = (url, unpivot = false) => 
     pipeWith(andThen, 
@@ -34,48 +27,51 @@ const pipe_update_query = (url, unpivot = false) =>
             () => loadCSV(url),
             tap(console.log),
             data => parseCSV(data, unpivot), 
-            tap(console.log), 
+            // tap(console.log),
+            ({ lines }) => lines.flat(),
         ]
-    )();
+    );
 
 
-
-// For testing
-
-const values = await pipe_update_query(CSV_URL, true).then(console.log("pipe_update_query done"));
-let entries = values['lines'].flat()
-// entries.forEach(e => {
-//   e.forEach(c => {
-//   console.log('Year:', c[0], '\tCountry:', c[1], '\tPopulation:', c[2]*1e6);
-//   })
-// })
-// entries.forEach(([year, country, pop]) => {
-//     console.log(`${year}, ${country}, ${pop * 1e6}`);
-// })
-
-
-const update_query = 'COPY population_by_year (year, country, population) FROM stdin WITH (FORMAT csv)'
-
-
-async function run() {
+async function run(data, dryRun=false) {
   await client.connect();
 
-  const copyStream = await client.query(copyString(update_query));
+  const update_query = 'COPY population_by_year (year, country, population) FROM stdin WITH (FORMAT csv)'
+ 
+  const copyStream = dryRun
+  ? null
+  : client.query(copyString(update_query))
+  
+
   const rs = new Readable({ read() {} });
-  entries.forEach(([year, country, pop]) => {
-    rs.push(`${year},${country},${Math.trunc(pop * 1e6)}\n`);
+  const func = dryRun
+    ? console.log 
+    : rs.push.bind(rs);
+  data.forEach(([year, country, pop]) => {
+      func(`${year},${country},${Math.trunc(pop * 1e6)}\n`);
   })
+  console.log('Pushing null to end stream')
   rs.push(null); // Signal end of stream
 
-    rs.pipe(copyStream)
-    .on('finish', () => {
-      console.log('COPY complete');
-      client.end();
-    })
-    .on('error', err => {
-      console.error('COPY failed', err);
-      client.end();
-    });
+  try{
+    if (!dryRun) {
+      rs.pipe(copyStream);
+      await new Promise((resolve, reject) => {
+        copyStream.on('finish', resolve);
+        copyStream.on('error', reject);
+      });
+      console.log('Data successfully copied to database');
+    } else {
+      console.log("Dry run: Data prepared but not copied to database");
+    }
+  } catch (err) {
+    console.error('Error during COPY operation', err);
+  } finally {
+    await client.end();
+  }
 }
 
-run().catch(err => console.error(err));
+await run(await pipe_update_query(CSV_URL, true)()
+.then(console.log("pipe_update_query done"))
+.catch(err => console.error(err)), 
+false);
