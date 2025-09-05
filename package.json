@@ -6,7 +6,8 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "update-db": "node update-postgres.js"
+    "update-db": "node update-postgres.js",
+    "bundle": "esbuild main.js --bundle --platform=browser --outfile=dist/main.js"
   },
   "repository": {
     "type": "git",
@@ -20,7 +21,12 @@
   },
   "homepage": "https://github.com/DylanLeisler/full-stack-kubernetes-data-pipeline#readme",
   "dependencies": {
+    "node-fetch": "^3.3.2",
     "pg": "^8.16.3",
+    "pg-copy-streams": "^7.0.0",
     "ramda": "^0.31.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.9"
   }
 }
